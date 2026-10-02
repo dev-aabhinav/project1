@@ -1,1 +1,17 @@
+# Installed packages: rebuilt from package-lock.json with `npm ci`
 node_modules/
+
+# Real secrets and config: NEVER commit
+.env
+.env.*
+!.env.example
+
+# Logs and OS / editor junk
+npm-debug.log*
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Test coverage output (added when we write tests in M3)
+coverage/
