@@ -4,11 +4,15 @@ require("dotenv").config({ quiet: true });
 const http = require("http");
 const { createApp } = require("./app");
 
-// Env vars are always strings: convert and validate, or crash now (fail fast).
-const port = Number(process.env.PORT ?? 5000);
+// Env vars are always strings. An empty PORT counts as "not set" (hence ||, not ??).
+const rawPort = process.env.PORT || "5000";
 
-if (!Number.isInteger(port) || port < 0 || port > 65535) {
-  console.error(`Invalid PORT: "${process.env.PORT}". Must be an integer 0-65535.`);
+// Validate the raw string: digits only. Number() alone is too forgiving
+// (Number("") and Number(" ") are both 0, which means "random port").
+const port = Number(rawPort);
+
+if (!/^\d+$/.test(rawPort) || port > 65535) {
+  console.error(`Invalid PORT: "${rawPort}". Must be an integer 0-65535.`);
   process.exit(1);
 }
 
@@ -26,7 +30,8 @@ server.on("error", (err) => {
 
 server.listen(port, () => {
   const mode = process.env.NODE_ENV || "development";
-  console.log(`Huddle API listening on http://localhost:${port} (${mode})`);
+  const actualPort = server.address().port; // differs from `port` when PORT=0
+  console.log(`Huddle API listening on http://localhost:${actualPort} (${mode})`);
 });
 
 // Graceful shutdown: stop accepting new connections, let in-flight requests finish.
