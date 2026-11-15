@@ -1,4 +1,5 @@
 const express = require("express");
+const { isDBReady } = require("./config/db");
 
 /**
  * Builds and returns the Express app WITHOUT starting it.
@@ -20,6 +21,16 @@ function createApp() {
       uptimeSeconds: Math.round(process.uptime()),
       timestamp: new Date().toISOString(),
     });
+  });
+
+  // Readiness probe: "can this instance serve real traffic?" Checks the DB connection
+  // state in memory (no query), so frequent probes add no DB load.
+  app.get("/api/ready", (req, res) => {
+    if (!isDBReady()) {
+      return res.status(503).json({ status: "not ready", db: "disconnected" });
+    }
+
+    res.status(200).json({ status: "ready", db: "connected" });
   });
 
   // 404: reached only if no route above matched.
