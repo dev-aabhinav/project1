@@ -1,5 +1,6 @@
 const express = require("express");
 const { isDBReady } = require("./config/db");
+const { toHttpError } = require("./utils/httpError");
 
 /**
  * Builds and returns the Express app WITHOUT starting it.
@@ -48,15 +49,20 @@ function createApp() {
       return next(err);
     }
 
-    const status = err.status || err.statusCode || 500;
+    const httpError = toHttpError(err);
 
-    if (status >= 500) {
+    // Log the ORIGINAL error for server faults; we need its stack to fix the bug.
+    if (httpError.status >= 500) {
       console.error(err);
     }
 
-    const message = status >= 500 ? "Internal server error" : err.message;
+    const body = { error: httpError.message };
 
-    res.status(status).json({ error: message });
+    if (httpError.details) {
+      body.details = httpError.details;
+    }
+
+    res.status(httpError.status).json(body);
   });
 
   return app;
