@@ -4,6 +4,11 @@ const { env } = require("./env");
 // If the DB is down, fail queries immediately instead of silently queueing them.
 mongoose.set("bufferCommands", false);
 
+// With buffering off, Mongoose's automatic background index/collection creation
+// would run before we are connected and crash. We build indexes ourselves in connectDB().
+mongoose.set("autoCreate", false);
+mongoose.set("autoIndex", false);
+
 // Log connection state changes so DB problems are visible in the server logs.
 mongoose.connection.on("disconnected", () => {
   console.warn("MongoDB disconnected");
@@ -29,6 +34,12 @@ async function connectDB() {
   // Log host and DB name only: the full URI can contain a password.
   const { host, port, name } = mongoose.connection;
   console.log(`MongoDB connected: ${host}:${port}/${name}`);
+
+  // Create every index declared in our schemas (e.g. unique email). Already-existing
+  // indexes are a no-op. Throws if, say, duplicate data blocks a unique index.
+  await Promise.all(
+    Object.values(mongoose.models).map((model) => model.createIndexes())
+  );
 }
 
 /** True only while the connection is open (readyState 1 = "connected"). */
