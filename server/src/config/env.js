@@ -53,6 +53,17 @@ if (!/^\d+[smhd]$/.test(jwtExpiresIn)) {
   errors.push(`JWT_EXPIRES_IN must look like 15m, 12h or 1d (got "${jwtExpiresIn}")`);
 }
 
+// ---- BCRYPT_ROUNDS ---- cost factor; each +1 doubles hashing time.
+// Default 11 chosen from scripts/bench-bcrypt.js (~143 ms/hash on a 4-vCPU box). Tests use 4.
+const rawBcryptRounds = process.env.BCRYPT_ROUNDS || "11";
+const bcryptRounds = Number(rawBcryptRounds);
+
+if (!/^\d+$/.test(rawBcryptRounds) || bcryptRounds < 4 || bcryptRounds > 15) {
+  errors.push(`BCRYPT_ROUNDS must be an integer 4-15 (got "${rawBcryptRounds}")`);
+} else if (nodeEnv === "production" && bcryptRounds < 10) {
+  errors.push("BCRYPT_ROUNDS must be at least 10 in production");
+}
+
 // Report ALL problems at once, not one per restart.
 if (errors.length > 0) {
   throw new Error(`Invalid environment configuration:\n  - ${errors.join("\n  - ")}`);
@@ -65,6 +76,7 @@ const env = Object.freeze({
   mongodbUri,
   jwtSecret,
   jwtExpiresIn,
+  bcryptRounds,
 });
 
 module.exports = { env };
