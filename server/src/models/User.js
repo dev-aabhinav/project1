@@ -48,6 +48,14 @@ const userSchema = new mongoose.Schema(
       type: String,
       default: null,
     },
+
+    // Copied into every JWT as `tv`. Incrementing it (e.g. on password change)
+    // makes all previously issued tokens invalid ("log out everywhere").
+    tokenVersion: {
+      type: Number,
+      default: 0,
+      select: false,
+    },
   },
   {
     // Adds createdAt and updatedAt, set automatically per document.
@@ -60,6 +68,7 @@ const userSchema = new mongoose.Schema(
         delete ret._id;
         delete ret.__v;
         delete ret.passwordHash;
+        delete ret.tokenVersion;
         return ret;
       },
     },
