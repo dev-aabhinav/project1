@@ -1,6 +1,8 @@
 const express = require("express");
 const { isDBReady } = require("./config/db");
 const { toHttpError } = require("./utils/httpError");
+const { env } = require("./config/env");
+const { createAuthRouter } = require("./routes/auth.routes");
 
 /**
  * Builds and returns the Express app WITHOUT starting it.
@@ -11,6 +13,14 @@ function createApp() {
 
   // Don't advertise "X-Powered-By: Express" to the world.
   app.disable("x-powered-by");
+
+  // Behind Render's proxy, every request arrives FROM the proxy. Trusting exactly one
+  // proxy hop makes req.ip the real client IP (needed for per-IP rate limits).
+  // Not in development: there is no proxy, and trusting X-Forwarded-For would let
+  // anyone fake their IP. (Hop count to be verified on the real deploy, M12.)
+  if (env.isProduction) {
+    app.set("trust proxy", 1);
+  }
 
   // Parse JSON request bodies into req.body. Bodies over 100 KB get a 413.
   app.use(express.json({ limit: "100kb" }));
@@ -33,6 +43,9 @@ function createApp() {
 
     res.status(200).json({ status: "ready", db: "connected" });
   });
+
+  // Feature routes.
+  app.use("/api/auth", createAuthRouter());
 
   // 404: reached only if no route above matched.
   app.use((req, res) => {
