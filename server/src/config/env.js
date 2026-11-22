@@ -33,6 +33,26 @@ if (!mongodbUri) {
   errors.push('MONGODB_URI must start with "mongodb://" or "mongodb+srv://"');
 }
 
+// ---- JWT_SECRET ---- (required: signs every login token)
+// The value in .env.example is for local development only.
+const DEV_EXAMPLE_JWT_SECRET = "dev-only-secret-change-me-0123456789abcdef";
+const jwtSecret = process.env.JWT_SECRET || "";
+
+if (!jwtSecret) {
+  errors.push("JWT_SECRET is required");
+} else if (jwtSecret.length < 32) {
+  errors.push("JWT_SECRET must be at least 32 characters");
+} else if (nodeEnv === "production" && jwtSecret === DEV_EXAMPLE_JWT_SECRET) {
+  errors.push("JWT_SECRET must not be the example value in production");
+}
+
+// ---- JWT_EXPIRES_IN ---- e.g. "15m", "12h", "1d"
+const jwtExpiresIn = process.env.JWT_EXPIRES_IN || "1d";
+
+if (!/^\d+[smhd]$/.test(jwtExpiresIn)) {
+  errors.push(`JWT_EXPIRES_IN must look like 15m, 12h or 1d (got "${jwtExpiresIn}")`);
+}
+
 // Report ALL problems at once, not one per restart.
 if (errors.length > 0) {
   throw new Error(`Invalid environment configuration:\n  - ${errors.join("\n  - ")}`);
@@ -43,6 +63,8 @@ const env = Object.freeze({
   isProduction: nodeEnv === "production",
   port,
   mongodbUri,
+  jwtSecret,
+  jwtExpiresIn,
 });
 
 module.exports = { env };
