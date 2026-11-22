@@ -1,12 +1,6 @@
 const { z } = require("zod");
 const { BCRYPT_MAX_BYTES } = require("../utils/password");
-
-// A string field with accurate messages: missing -> "X is required", wrong type -> "X must be a string".
-function requiredString(label) {
-  return z.string({
-    error: (issue) => (issue.input === undefined ? `${label} is required` : `${label} must be a string`),
-  });
-}
+const { requiredString, username } = require("./common");
 
 // New passwords (signup, change password). Login does NOT use this rule.
 const newPassword = requiredString("Password")
@@ -28,10 +22,7 @@ const signupSchema = z.object({
     .min(1, "Name is required")
     .max(50, "Name must be at most 50 characters"),
 
-  username: requiredString("Username")
-    .trim()
-    .toLowerCase()
-    .regex(/^[a-z0-9_]{3,20}$/, "Username must be 3-20 letters, numbers or underscores"),
+  username,
 
   email,
 

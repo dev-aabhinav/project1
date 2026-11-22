@@ -1,16 +1,26 @@
 const { HttpError } = require("../utils/httpError");
 
+const SOURCES = ["body", "query", "params"];
+
 /**
- * Returns middleware that validates req.body against a zod schema.
- * On success, req.body is REPLACED by the parsed result: trimmed, lowercased,
- * and with every field the schema doesn't know removed.
- * On failure, throws a 400 listing every problem.
+ * Returns middleware that validates one part of the request against a zod schema:
+ *   validate(schema)            -> req.body
+ *   validate(schema, "query")   -> req.query   (?limit=20&cursor=...)
+ *   validate(schema, "params")  -> req.params  (/users/:username)
+ *
+ * The parsed result (trimmed, lowercased, coerced, unknown fields removed) is stored in
+ * req.valid[source]; controllers read from there. In Express 5, req.query is a getter and
+ * assigning to it is SILENTLY ignored, so "replacing" it would leave the raw input in place.
+ * For the body we also replace req.body (the auth controllers read it directly).
  */
-function validate(schema) {
+function validate(schema, source = "body") {
+  if (!SOURCES.includes(source)) {
+    throw new Error(`validate(): unknown source "${source}"`);
+  }
+
   return (req, res, next) => {
-    // No JSON body at all -> req.body is undefined in Express 5; validate {} instead,
-    // so the client gets "X is required" for each field rather than one vague error.
-    const result = schema.safeParse(req.body ?? {});
+    // No JSON body -> req.body is undefined in Express 5; validate {} so each field is reported.
+    const result = schema.safeParse(req[source] ?? {});
 
     if (!result.success) {
       const details = result.error.issues.map((issue) => ({
@@ -21,7 +31,12 @@ function validate(schema) {
       throw new HttpError(400, "Validation failed", details);
     }
 
-    req.body = result.data;
+    req.valid = { ...req.valid, [source]: result.data };
+
+    if (source === "body") {
+      req.body = result.data;
+    }
+
     next();
   };
 }
