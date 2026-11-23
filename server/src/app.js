@@ -3,6 +3,7 @@ const { isDBReady } = require("./config/db");
 const { toHttpError } = require("./utils/httpError");
 const { env } = require("./config/env");
 const { createAuthRouter } = require("./routes/auth.routes");
+const { createUsersRouter } = require("./routes/users.routes");
 
 /**
  * Builds and returns the Express app WITHOUT starting it.
@@ -46,6 +47,7 @@ function createApp() {
 
   // Feature routes.
   app.use("/api/auth", createAuthRouter());
+  app.use("/api/users", createUsersRouter());
 
   // 404: reached only if no route above matched.
   app.use((req, res) => {

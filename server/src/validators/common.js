@@ -11,7 +11,15 @@ function requiredString(label) {
   });
 }
 
-const username = requiredString("Username").trim().toLowerCase().regex(USERNAME_REGEX, USERNAME_MESSAGE);
+// Words that are also route segments under /api/users/... A user with one of these
+// usernames would have an unreachable profile URL, so they can't be registered.
+const RESERVED_USERNAMES = ["me", "search"];
+
+const username = requiredString("Username")
+  .trim()
+  .toLowerCase()
+  .regex(USERNAME_REGEX, USERNAME_MESSAGE)
+  .refine((value) => !RESERVED_USERNAMES.includes(value), "This username is reserved");
 
 // A MongoDB ObjectId as a 24-character hex string (used as a pagination cursor).
 const objectIdString = z.string().regex(/^[a-f\d]{24}$/i, "Invalid cursor");
@@ -28,4 +36,12 @@ const paginationQuery = z.object({
   cursor: objectIdString.optional(),
 });
 
-module.exports = { USERNAME_REGEX, USERNAME_MESSAGE, requiredString, username, objectIdString, paginationQuery };
+module.exports = {
+  USERNAME_REGEX,
+  USERNAME_MESSAGE,
+  RESERVED_USERNAMES,
+  requiredString,
+  username,
+  objectIdString,
+  paginationQuery,
+};
